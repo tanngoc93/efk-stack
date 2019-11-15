@@ -20,15 +20,14 @@
 [entryPoints]
   [entryPoints.web]
     address = ":80"
-
-  [entryPoints.web-secure]
+  [entryPoints.websecured]
     address = ":443"
 
-[certificatesResolvers.myhttpchallenge.acme]
-  email = "tanngoc93@gmail.com"
-  storage = "/etc/traefik/letsencrypt/acme.json"
-
-  [certificatesResolvers.myhttpchallenge.acme.httpChallenge]
+[certificatesResolvers.mytlschallenge.acme]
+  email    = "username@email.com"
+  caServer = "https://acme-v02.api.letsencrypt.org/directory"
+  storage  = "/letsencrypt/acme.json"
+  [certificatesResolvers.mytlschallenge.acme.httpChallenge]
     entryPoint = "web"
 
 ################################################################
@@ -52,7 +51,7 @@
 
 # Enable API and dashboard
 [api]
-  insecure = false
+  dashboard = true
 
 ################################################################
 # Docker configuration backend
@@ -61,8 +60,5 @@
 # Enable Docker configuration backend
 [providers.docker]
   swarmMode = true
-  swarmModeRefreshSeconds = "30s"
   exposedByDefault = false
-
-
-
+  endpoint = "unix:///var/run/docker.sock"

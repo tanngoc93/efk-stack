@@ -1,0 +1,62 @@
+version: "3.7"
+
+networks:
+  elk_network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    external: true
+
+  public_network:
+    driver: overlay
+    external: true
+
+services:
+  traefik:
+    image: traefik:v2.2.0
+    volumes:
+      - "./traefik/letsencrypt:/letsencrypt"
+      - "./traefik/traefik.toml:/etc/traefik/traefik.toml"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    networks:
+      - elk_network
+      - public_network
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    logging:
+      driver: fluentd
+      options:
+        fluentd-async-connect: "true"
+        tag: traefik.access
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - "traefik.enable=true"
+        - "traefik.docker.network=public_network"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        #
+        - "traefik.http.routers.api.rule=Host(`traefik.domain.com`)"
+        - "traefik.http.routers.api.entrypoints=web"
+        - "traefik.http.routers.api.middlewares=redirect-to-https"
+        # 
+        - "traefik.http.services.dummy-svc.loadbalancer.server.port=8080"
+        # 
+        - "traefik.http.routers.api-secured.rule=Host(`traefik.domain.com`)"
+        - "traefik.http.routers.api-secured.entrypoints=websecured"
+        - "traefik.http.routers.api-secured.service=api@internal"
+        - "traefik.http.routers.api-secured.tls=true"
+        - "traefik.http.routers.api-secured.tls.certresolver=mytlschallenge"
+
+        # Username & Password: (deployer | 1qazxsw2)
+        - "traefik.http.routers.api-secured.middlewares=auth"
+        - "traefik.http.middlewares.auth.basicauth.users=deployer:$$apr1$$YC72QMpN$$/SEGFLFkpRDa065tAWuRZ/"
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any

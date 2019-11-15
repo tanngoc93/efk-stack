@@ -1,7 +1,7 @@
 version: "3.7"
 
 networks:
-  agent_network:
+  private_network:
     driver: overlay
     attachable: true
 
@@ -11,22 +11,20 @@ networks:
       encrypted: "true"
     external: true
 
-  traefik_network:
+  public_network:
     driver: overlay
     external: true
 
 services:
   frontend:
-    image: tanngoc93/frontend
+    image: tanngoc93/frontend:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - elk_network
-      - agent_network
-      - traefik_network
+      - private_network
+      - public_network
     depends_on:
-      - db
-      - kibana
       - backend
     logging:
       driver: fluentd
@@ -38,20 +36,22 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.role == worker
+          - node.role == manager
       labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik_network
-        - traefik.http.services.frontend.loadbalancer.server.port=80
-        - traefik.http.middlewares.frontend-redirectscheme.redirectscheme.scheme=https
-
-        - traefik.http.routers.frontend_insecure.entrypoints=web
-        - traefik.http.routers.frontend_insecure.rule=Host(`domain.com`)
-        - traefik.http.routers.frontend_insecure.middlewares=frontend-redirectscheme
-
-        - traefik.http.routers.frontend_secured.tls=true
-        - traefik.http.routers.frontend_secured.entrypoints=web-secure
-        - traefik.http.routers.frontend_secured.rule=Host(`domain.com`)
+        - "traefik.enable=true"
+        - "traefik.docker.network=public_network"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        #
+        - "traefik.http.routers.frontend.rule=Host(`domain.com`)"
+        - "traefik.http.routers.frontend.entrypoints=web"
+        - "traefik.http.routers.frontend.middlewares=redirect-to-https"
+        # 
+        - "traefik.http.services.frontend-svc.loadbalancer.server.port=80"
+        # 
+        - "traefik.http.routers.frontend-secured.rule=Host(`domain.com`)"
+        - "traefik.http.routers.frontend-secured.entrypoints=websecured"
+        - "traefik.http.routers.frontend-secured.tls=true"
+        - "traefik.http.routers.frontend-secured.tls.certresolver=mytlschallenge"
       update_config:
         parallelism: 1
         delay: 10s
@@ -59,7 +59,7 @@ services:
         condition: any
 
   backend:
-    image: tanngoc93/backend
+    image: tanngoc93/backend:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
@@ -67,16 +67,15 @@ services:
       PSQL_HOST: db
       PSQL_USERNAME: postgres
       PSQL_PASSWORD: postgres
-      PSQL_DATABASE: backend_pro
+      PSQL_DATABASE: demodb
       RAILS_ENV: production
       RACK_ENV: production
     networks:
       - elk_network
-      - agent_network
-      - traefik_network
+      - private_network
+      - public_network
     depends_on:
       - db
-      - kibana
     logging:
       driver: fluentd
       options:
@@ -87,20 +86,22 @@ services:
       replicas: 1
       placement:
         constraints:
-          - node.role == worker
+          - node.role == manager
       labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik_network
-        - traefik.http.services.backend.loadbalancer.server.port=80
-        - traefik.http.middlewares.backend-redirectscheme.redirectscheme.scheme=https
-
-        - traefik.http.routers.backend_insecure.entrypoints=web
-        - traefik.http.routers.backend_insecure.rule=Host(`backend.domain.com`)
-        - traefik.http.routers.backend_insecure.middlewares=backend-redirectscheme
-
-        - traefik.http.routers.backend_secured.tls=true
-        - traefik.http.routers.backend_secured.entrypoints=web-secure
-        - traefik.http.routers.backend_secured.rule=Host(`backend.domain.com`)
+        - "traefik.enable=true"
+        - "traefik.docker.network=public_network"
+        - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
+        #
+        - "traefik.http.routers.backend.rule=Host(`backend.domain.com`)"
+        - "traefik.http.routers.backend.entrypoints=web"
+        - "traefik.http.routers.backend.middlewares=redirect-to-https"
+        # 
+        - "traefik.http.services.backend-svc.loadbalancer.server.port=80"
+        # 
+        - "traefik.http.routers.backend-secured.rule=Host(`backend.domain.com`)"
+        - "traefik.http.routers.backend-secured.entrypoints=websecured"
+        - "traefik.http.routers.backend-secured.tls=true"
+        - "traefik.http.routers.backend-secured.tls.certresolver=mytlschallenge"
       update_config:
         parallelism: 1
         delay: 10s
@@ -115,10 +116,10 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=backend_pro
+      - POSTGRES_DB=demodb
     networks:
       - elk_network
-      - agent_network
+      - private_network
     logging:
       driver: fluentd
       options:
@@ -132,42 +133,6 @@ services:
           - node.role == manager
       labels:
         - traefik.enable=false
-      update_config:
-        parallelism: 1
-        delay: 10s
-      restart_policy:
-        condition: any
-
-  adminer:
-    image: adminer
-    networks:
-      - agent_network
-      - traefik_network
-    depends_on:
-      - db
-    deploy:
-      mode: replicated
-      replicas: 1
-      placement:
-        constraints:
-          - node.role == manager
-      labels:
-        - traefik.enable=true
-        - traefik.docker.network=traefik_network
-        - traefik.http.services.adminer.loadbalancer.server.port=8080
-        - traefik.http.middlewares.adminer-redirectscheme.redirectscheme.scheme=https
-
-        - traefik.http.routers.adminer_insecure.entrypoints=web
-        - traefik.http.routers.adminer_insecure.rule=Host(`adminer.domain.com`)
-        - traefik.http.routers.adminer_insecure.middlewares=adminer-redirectscheme
-
-        - traefik.http.routers.adminer_secured.tls=true
-        - traefik.http.routers.adminer_secured.entrypoints=web-secure
-        - traefik.http.routers.adminer_secured.rule=Host(`adminer.domain.com`)
-
-        # Username & Password: (deployer | 1qazxsw2)
-        - traefik.http.routers.adminer_secured.middlewares=basicAuth
-        - traefik.http.middlewares.basicAuth.basicauth.users=deployer:$$apr1$$YC72QMpN$$/SEGFLFkpRDa065tAWuRZ/
       update_config:
         parallelism: 1
         delay: 10s

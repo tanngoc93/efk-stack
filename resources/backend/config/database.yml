@@ -1,0 +1,11 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool:     <%= ENV["PSQL_POOL"] || 5 %>
+  host:     <%= ENV["PSQL_HOST"] %>
+  username: <%= ENV["PSQL_USERNAME"] %>
+  password: <%= ENV["PSQL_PASSWORD"] %>
+
+production:
+  <<: *default
+  database: <%= ENV["PSQL_DATABASE"] %>

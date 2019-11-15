@@ -1,9 +1,3 @@
-### Check it out
-- Frontend service: http://theguardon.com/
-- Frontend service: http://backend.theguardon.com/api/v1/images/
-- Traefik stack: http://monitor.theguardon.com/
-- EFK stack: http://kibana.theguardon.com/
-
 ### 1. Orchestration
 
 ```html 
