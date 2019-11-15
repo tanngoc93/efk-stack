@@ -1,0 +1,68 @@
+################################################################
+#
+# Configuration sample for Traefik v2.
+# Read more: https://raw.githubusercontent.com/containous/traefik/master/traefik.sample.toml
+#
+################################################################
+
+################################################################
+# Global configuration
+################################################################
+[global]
+  checkNewVersion = true
+  sendAnonymousUsage = true
+
+################################################################
+# Entrypoints configuration
+################################################################
+
+# Entrypoints definition
+[entryPoints]
+  [entryPoints.web]
+    address = ":80"
+
+  [entryPoints.web-secure]
+    address = ":443"
+
+[certificatesResolvers.myhttpchallenge.acme]
+  email = "tanngoc93@gmail.com"
+  storage = "/etc/traefik/letsencrypt/acme.json"
+
+  [certificatesResolvers.myhttpchallenge.acme.httpChallenge]
+    entryPoint = "web"
+
+################################################################
+# Traefik logs configuration
+################################################################
+
+# Enabled by default and log to stdout
+[log]
+  level = "DEBUG"
+
+################################################################
+# Access logs configuration
+################################################################
+
+# Enable access logs
+[accessLog]
+
+################################################################
+# API and dashboard configuration
+################################################################
+
+# Enable API and dashboard
+[api]
+  insecure = false
+
+################################################################
+# Docker configuration backend
+################################################################
+
+# Enable Docker configuration backend
+[providers.docker]
+  swarmMode = true
+  swarmModeRefreshSeconds = "30s"
+  exposedByDefault = false
+
+
+

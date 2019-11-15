@@ -1,0 +1,96 @@
+version: "3.7"
+
+networks:
+  elk_network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    external: true
+
+  traefik_network:
+    driver: overlay
+    external: true
+
+volumes:
+  esdata: {}
+
+services:
+  kibana:
+    image: docker.elastic.co/kibana/kibana:7.4.1
+    networks:
+      - elk_network
+      - traefik_network
+    environment:
+      ELASTICSEARCH_URL: http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_network
+        - traefik.http.services.kibana.loadbalancer.server.port=5601
+        - traefik.http.middlewares.kibana-redirectscheme.redirectscheme.scheme=https
+
+        - traefik.http.routers.kibana_insecure.entrypoints=web
+        - traefik.http.routers.kibana_insecure.middlewares=kibana-redirectscheme
+        - traefik.http.routers.kibana_insecure.rule=Host(`kibana.domain.com`)
+
+        - traefik.http.routers.kibana_secured.tls=true
+        - traefik.http.routers.kibana_secured.entrypoints=web-secure
+        - traefik.http.routers.kibana_secured.rule=Host(`kibana.domain.com`)
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:7.4.1
+    environment:
+      - "discovery.type=single-node"
+      - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+    volumes:
+      - esdata:/usr/share/elasticsearch/data
+    networks:
+      - elk_network
+    deploy:
+      mode: global
+      endpoint_mode: dnsrr
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=false
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+
+  fluentd:
+    image: tanngoc93/fluentd
+    volumes:
+      - ./fluentd/etc:/fluentd/etc
+    ports:
+      - "24224:24224"
+      - "24224:24224/udp"
+    networks:
+      - elk_network
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=false
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any

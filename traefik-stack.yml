@@ -1,0 +1,66 @@
+version: "3.7"
+
+networks:
+  agent_network:
+    driver: overlay
+    attachable: true
+
+  elk_network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    external: true
+
+  traefik_network:
+    driver: overlay
+    external: true
+
+services:
+  reverse-proxy:
+    image: traefik:v2.0.4
+    volumes:
+      - ./traefik:/etc/traefik
+      -  /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elk_network
+      - agent_network
+      - traefik_network
+    ports:
+      - target: 80
+        published: 80
+        mode: host
+      - target: 443
+        published: 443
+        mode: host
+    logging:
+      driver: fluentd
+      options:
+        fluentd-async-connect: "true"
+        tag: traefik.access
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_network
+        - traefik.http.services.reverse-proxy.loadbalancer.server.port=8080
+        - traefik.http.middlewares.reverse-proxy-redirectscheme.redirectscheme.scheme=https
+
+        - traefik.http.routers.reverse-proxy_insecure.entrypoints=web
+        - traefik.http.routers.reverse-proxy_insecure.rule=Host(`monitor.domain.com`)
+        - traefik.http.routers.reverse-proxy_insecure.middlewares=reverse-proxy-redirectscheme
+
+        - traefik.http.routers.reverse-proxy_secured.tls=true
+        - traefik.http.routers.reverse-proxy_secured.entrypoints=web-secure
+        - traefik.http.routers.reverse-proxy_secured.rule=Host(`monitor.domain.com`)
+
+        # Username & Password: (deployer | 1qazxsw2)
+        - traefik.http.routers.reverse-proxy_secured.middlewares=basicAuth
+        - traefik.http.middlewares.basicAuth.basicauth.users=deployer:$$apr1$$YC72QMpN$$/SEGFLFkpRDa065tAWuRZ/
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any

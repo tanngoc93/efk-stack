@@ -1,0 +1,175 @@
+version: "3.7"
+
+networks:
+  agent_network:
+    driver: overlay
+    attachable: true
+
+  elk_network:
+    driver: overlay
+    driver_opts:
+      encrypted: "true"
+    external: true
+
+  traefik_network:
+    driver: overlay
+    external: true
+
+services:
+  frontend:
+    image: tanngoc93/frontend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      - elk_network
+      - agent_network
+      - traefik_network
+    depends_on:
+      - db
+      - kibana
+      - backend
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: frontend.access
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_network
+        - traefik.http.services.frontend.loadbalancer.server.port=80
+        - traefik.http.middlewares.frontend-redirectscheme.redirectscheme.scheme=https
+
+        - traefik.http.routers.frontend_insecure.entrypoints=web
+        - traefik.http.routers.frontend_insecure.rule=Host(`domain.com`)
+        - traefik.http.routers.frontend_insecure.middlewares=frontend-redirectscheme
+
+        - traefik.http.routers.frontend_secured.tls=true
+        - traefik.http.routers.frontend_secured.entrypoints=web-secure
+        - traefik.http.routers.frontend_secured.rule=Host(`domain.com`)
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+
+  backend:
+    image: tanngoc93/backend
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      PSQL_POOL: 5
+      PSQL_HOST: db
+      PSQL_USERNAME: postgres
+      PSQL_PASSWORD: postgres
+      PSQL_DATABASE: backend_pro
+      RAILS_ENV: production
+      RACK_ENV: production
+    networks:
+      - elk_network
+      - agent_network
+      - traefik_network
+    depends_on:
+      - db
+      - kibana
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: backend.access
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == worker
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_network
+        - traefik.http.services.backend.loadbalancer.server.port=80
+        - traefik.http.middlewares.backend-redirectscheme.redirectscheme.scheme=https
+
+        - traefik.http.routers.backend_insecure.entrypoints=web
+        - traefik.http.routers.backend_insecure.rule=Host(`backend.domain.com`)
+        - traefik.http.routers.backend_insecure.middlewares=backend-redirectscheme
+
+        - traefik.http.routers.backend_secured.tls=true
+        - traefik.http.routers.backend_secured.entrypoints=web-secure
+        - traefik.http.routers.backend_secured.rule=Host(`backend.domain.com`)
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+
+  db:
+    image: postgres:11.4
+    volumes:
+      -  /var/run/docker.sock:/var/run/docker.sock
+      - ./pgdata:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=backend_pro
+    networks:
+      - elk_network
+      - agent_network
+    logging:
+      driver: fluentd
+      options:
+        fluentd-address: localhost:24224
+        tag: db.access
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=false
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
+
+  adminer:
+    image: adminer
+    networks:
+      - agent_network
+      - traefik_network
+    depends_on:
+      - db
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      labels:
+        - traefik.enable=true
+        - traefik.docker.network=traefik_network
+        - traefik.http.services.adminer.loadbalancer.server.port=8080
+        - traefik.http.middlewares.adminer-redirectscheme.redirectscheme.scheme=https
+
+        - traefik.http.routers.adminer_insecure.entrypoints=web
+        - traefik.http.routers.adminer_insecure.rule=Host(`adminer.domain.com`)
+        - traefik.http.routers.adminer_insecure.middlewares=adminer-redirectscheme
+
+        - traefik.http.routers.adminer_secured.tls=true
+        - traefik.http.routers.adminer_secured.entrypoints=web-secure
+        - traefik.http.routers.adminer_secured.rule=Host(`adminer.domain.com`)
+
+        # Username & Password: (deployer | 1qazxsw2)
+        - traefik.http.routers.adminer_secured.middlewares=basicAuth
+        - traefik.http.middlewares.basicAuth.basicauth.users=deployer:$$apr1$$YC72QMpN$$/SEGFLFkpRDa065tAWuRZ/
+      update_config:
+        parallelism: 1
+        delay: 10s
+      restart_policy:
+        condition: any
