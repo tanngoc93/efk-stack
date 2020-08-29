@@ -24,13 +24,12 @@ Docuemnt:<br>
 
 ### 2. Traefik
 
-Document:<br>
-- https://traefik.io/<br>
+Document: https://traefik.io/<br>
 
 ### 4. EFK(Elasticsearch + Fluentd + Kibana)
 
 ```html
-Another way: is ELF(Elasticsearch + Logstash + Kibana)
+Another way: is ELK(Elasticsearch + Logstash + Kibana)
 ```
 
 ```html
