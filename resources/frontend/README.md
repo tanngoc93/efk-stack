@@ -1,1 +1,0 @@
-# docker-frontend-service

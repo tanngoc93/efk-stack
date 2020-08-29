@@ -5,7 +5,7 @@ networks:
     driver: overlay
     attachable: true
 
-  elk_network:
+  efk_network:
     driver: overlay
     driver_opts:
       encrypted: "true"
@@ -17,19 +17,22 @@ networks:
 
 services:
   frontend:
-    image: tanngoc93/frontend:latest
+    image: tanngoc93/efk-frontend:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      API_HOST: "https://backend.theguardon.com"
     networks:
-      - elk_network
+      - efk_network
       - private_network
       - public_network
     depends_on:
+      - db
       - backend
     logging:
-      driver: fluentd
+      driver: "fluentd"
       options:
-        fluentd-address: localhost:24224
+        fluentd-async-connect: "true"
         tag: frontend.access
     deploy:
       mode: replicated
@@ -42,13 +45,13 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.frontend.rule=Host(`domain.com`)"
+        - "traefik.http.routers.frontend.rule=Host(`theguardon.com`)"
         - "traefik.http.routers.frontend.entrypoints=web"
         - "traefik.http.routers.frontend.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.frontend-svc.loadbalancer.server.port=80"
         # 
-        - "traefik.http.routers.frontend-secured.rule=Host(`domain.com`)"
+        - "traefik.http.routers.frontend-secured.rule=Host(`theguardon.com`)"
         - "traefik.http.routers.frontend-secured.entrypoints=websecured"
         - "traefik.http.routers.frontend-secured.tls=true"
         - "traefik.http.routers.frontend-secured.tls.certresolver=mytlschallenge"
@@ -59,19 +62,19 @@ services:
         condition: any
 
   backend:
-    image: tanngoc93/backend:latest
+    image: tanngoc93/efk-backend:latest
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      PSQL_POOL: 5
+      PSQL_POOL: 1
       PSQL_HOST: db
       PSQL_USERNAME: postgres
       PSQL_PASSWORD: postgres
-      PSQL_DATABASE: demodb
+      PSQL_DATABASE: postgresdb
       RAILS_ENV: production
       RACK_ENV: production
     networks:
-      - elk_network
+      - efk_network
       - private_network
       - public_network
     depends_on:
@@ -79,7 +82,7 @@ services:
     logging:
       driver: fluentd
       options:
-        fluentd-address: localhost:24224
+        fluentd-async-connect: "true"
         tag: backend.access
     deploy:
       mode: replicated
@@ -92,13 +95,13 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.backend.rule=Host(`backend.domain.com`)"
+        - "traefik.http.routers.backend.rule=Host(`backend.theguardon.com`)"
         - "traefik.http.routers.backend.entrypoints=web"
         - "traefik.http.routers.backend.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.backend-svc.loadbalancer.server.port=80"
         # 
-        - "traefik.http.routers.backend-secured.rule=Host(`backend.domain.com`)"
+        - "traefik.http.routers.backend-secured.rule=Host(`backend.theguardon.com`)"
         - "traefik.http.routers.backend-secured.entrypoints=websecured"
         - "traefik.http.routers.backend-secured.tls=true"
         - "traefik.http.routers.backend-secured.tls.certresolver=mytlschallenge"
@@ -116,14 +119,14 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
-      - POSTGRES_DB=demodb
+      - POSTGRES_DB=postgresdb
     networks:
-      - elk_network
+      - efk_network
       - private_network
     logging:
       driver: fluentd
       options:
-        fluentd-address: localhost:24224
+        fluentd-async-connect: "true"
         tag: db.access
     deploy:
       mode: replicated

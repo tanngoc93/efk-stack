@@ -24,7 +24,7 @@
     address = ":443"
 
 [certificatesResolvers.mytlschallenge.acme]
-  email    = "username@email.com"
+  email    = "tanngoc93@gmail.com"
   caServer = "https://acme-v02.api.letsencrypt.org/directory"
   storage  = "/letsencrypt/acme.json"
   [certificatesResolvers.mytlschallenge.acme.httpChallenge]

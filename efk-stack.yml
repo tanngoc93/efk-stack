@@ -1,7 +1,7 @@
 version: "3.7"
 
 networks:
-  elk_network:
+  efk_network:
     driver: overlay
     driver_opts:
       encrypted: "true"
@@ -18,15 +18,14 @@ services:
   kibana:
     image: docker.elastic.co/kibana/kibana:7.4.1
     networks:
-      - elk_network
+      - efk_network
       - public_network
     environment:
       ELASTICSEARCH_URL: http://elasticsearch:9200
     depends_on:
       - elasticsearch
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.role == manager
@@ -35,13 +34,13 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.kibana.rule=Host(`kibana.domain.com`)"
+        - "traefik.http.routers.kibana.rule=Host(`kibana.theguardon.com`)"
         - "traefik.http.routers.kibana.entrypoints=web"
         - "traefik.http.routers.kibana.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.kibana-svc.loadbalancer.server.port=5601"
         # 
-        - "traefik.http.routers.kibana-secured.rule=Host(`kibana.domain.com`)"
+        - "traefik.http.routers.kibana-secured.rule=Host(`kibana.theguardon.com`)"
         - "traefik.http.routers.kibana-secured.entrypoints=websecured"
         - "traefik.http.routers.kibana-secured.tls=true"
         - "traefik.http.routers.kibana-secured.tls.certresolver=mytlschallenge"
@@ -59,7 +58,7 @@ services:
     volumes:
       - esdata:/usr/share/elasticsearch/data
     networks:
-      - elk_network
+      - efk_network
     deploy:
       mode: global
       endpoint_mode: dnsrr
@@ -75,17 +74,18 @@ services:
         condition: any
 
   fluentd:
-    image: tanngoc93/fluentd
+    user: root
+    image: tanngoc93/efk-fluentd:latest
     volumes:
-      - ./fluentd/etc:/fluentd/etc
+      - "/home/deployer/docker/fluentd/conf:/fluentd/etc"
+      - "/home/deployer/docker/fluentd/log:/fluentd/log"
     ports:
       - "24224:24224"
       - "24224:24224/udp"
     networks:
-      - elk_network
+      - efk_network
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.role == manager
