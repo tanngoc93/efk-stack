@@ -49,13 +49,13 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.api.rule=Host(`traefik.theguardon.com`)"
+        - "traefik.http.routers.api.rule=Host(`traefik.${DOMAIN}`)"
         - "traefik.http.routers.api.entrypoints=web"
         - "traefik.http.routers.api.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.dummy-svc.loadbalancer.server.port=8080"
         # 
-        - "traefik.http.routers.api-secured.rule=Host(`traefik.theguardon.com`)"
+        - "traefik.http.routers.api-secured.rule=Host(`traefik.${DOMAIN}`)"
         - "traefik.http.routers.api-secured.entrypoints=websecured"
         - "traefik.http.routers.api-secured.service=api@internal"
         - "traefik.http.routers.api-secured.tls=true"

@@ -34,13 +34,13 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.kibana.rule=Host(`kibana.theguardon.com`)"
+        - "traefik.http.routers.kibana.rule=Host(`kibana.${DOMAIN}`)"
         - "traefik.http.routers.kibana.entrypoints=web"
         - "traefik.http.routers.kibana.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.kibana-svc.loadbalancer.server.port=5601"
         # 
-        - "traefik.http.routers.kibana-secured.rule=Host(`kibana.theguardon.com`)"
+        - "traefik.http.routers.kibana-secured.rule=Host(`kibana.${DOMAIN}`)"
         - "traefik.http.routers.kibana-secured.entrypoints=websecured"
         - "traefik.http.routers.kibana-secured.tls=true"
         - "traefik.http.routers.kibana-secured.tls.certresolver=mytlschallenge"
