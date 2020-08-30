@@ -129,8 +129,7 @@ services:
         fluentd-async-connect: "true"
         tag: db.access
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.role == manager
