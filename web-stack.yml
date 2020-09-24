@@ -66,11 +66,10 @@ services:
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
-      PSQL_POOL: 1
       PSQL_HOST: db
       PSQL_USERNAME: postgres
       PSQL_PASSWORD: postgres
-      PSQL_DATABASE: postgresdb
+      PSQL_PROD_DATABASE: postgresdb
       RAILS_ENV: production
       RACK_ENV: production
     networks:
