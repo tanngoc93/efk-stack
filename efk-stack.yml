@@ -34,16 +34,16 @@ services:
         - "traefik.docker.network=public_network"
         - "traefik.http.middlewares.redirect-to-https.redirectscheme.scheme=https"
         #
-        - "traefik.http.routers.kibana.rule=Host(`kibana.${DOMAIN}`)"
-        - "traefik.http.routers.kibana.entrypoints=web"
-        - "traefik.http.routers.kibana.middlewares=redirect-to-https"
+        - "traefik.http.routers.kibana-http.rule=Host(`kibana.${DOMAIN}`)"
+        - "traefik.http.routers.kibana-http.entrypoints=web"
+        - "traefik.http.routers.kibana-http.middlewares=redirect-to-https"
         # 
         - "traefik.http.services.kibana-svc.loadbalancer.server.port=5601"
         # 
-        - "traefik.http.routers.kibana-secured.rule=Host(`kibana.${DOMAIN}`)"
-        - "traefik.http.routers.kibana-secured.entrypoints=websecured"
-        - "traefik.http.routers.kibana-secured.tls=true"
-        - "traefik.http.routers.kibana-secured.tls.certresolver=mytlschallenge"
+        - "traefik.http.routers.kibana-https.rule=Host(`kibana.${DOMAIN}`)"
+        - "traefik.http.routers.kibana-https.entrypoints=websecured"
+        - "traefik.http.routers.kibana-https.tls=true"
+        - "traefik.http.routers.kibana-https.tls.certresolver=mytlschallenge"
       update_config:
         parallelism: 1
         delay: 10s
