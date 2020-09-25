@@ -36,7 +36,7 @@ services:
         #
         - "traefik.http.routers.kibana-http.rule=Host(`kibana.${DOMAIN}`)"
         - "traefik.http.routers.kibana-http.entrypoints=web"
-        - "traefik.http.routers.kibana-http.middlewares=redirect-to-https"
+        - "traefik.http.routers.kibana-http.middlewares=redirect-to-https@docker"
         # 
         - "traefik.http.services.kibana-svc.loadbalancer.server.port=5601"
         # 

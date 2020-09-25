@@ -51,7 +51,7 @@ services:
         #
         - "traefik.http.routers.proxy-http.rule=Host(`traefik.${DOMAIN}`)"
         - "traefik.http.routers.proxy-http.entrypoints=web"
-        - "traefik.http.routers.proxy-http.middlewares=redirect-to-https"
+        - "traefik.http.routers.proxy-http.middlewares=redirect-to-https@docker"
         # 
         - "traefik.http.services.dummy-svc.loadbalancer.server.port=8080"
         # 

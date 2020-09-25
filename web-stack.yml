@@ -47,7 +47,7 @@ services:
         #
         - "traefik.http.routers.frontend-http.rule=Host(`${DOMAIN}`)"
         - "traefik.http.routers.frontend-http.entrypoints=web"
-        - "traefik.http.routers.frontend-http.middlewares=redirect-to-https"
+        - "traefik.http.routers.frontend-http.middlewares=redirect-to-https@docker"
         # 
         - "traefik.http.services.frontend-svc.loadbalancer.server.port=80"
         # 
@@ -97,7 +97,7 @@ services:
         #
         - "traefik.http.routers.backend.rule=Host(`backend.${DOMAIN}`)"
         - "traefik.http.routers.backend.entrypoints=web"
-        - "traefik.http.routers.backend.middlewares=redirect-to-https"
+        - "traefik.http.routers.backend.middlewares=redirect-to-https@docker"
         # 
         - "traefik.http.services.backend-svc.loadbalancer.server.port=80"
         # 
